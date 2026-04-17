@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+
+  <!-- hairline top/bottom for the Swiss frame hint -->
+  <line x1="80" y1="90" x2="1120" y2="90" stroke="#1f1f1f" stroke-width="1"/>
+  <line x1="80" y1="540" x2="1120" y2="540" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- masthead-style meta row -->
+  <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="16" letter-spacing="2.5" fill="#9a9a9a">
+    <text x="80" y="75" fill="#e6e6e6">MUJICA.DEV</text>
+    <text x="540" y="75" text-anchor="middle">PATAGONIA · CL</text>
+    <text x="1120" y="75" text-anchor="end" fill="#e6e6e6">● AVAILABLE</text>
+  </g>
+
+  <!-- name -->
+  <g font-family="Helvetica, Arial, sans-serif" font-weight="500" font-size="180" letter-spacing="-6" fill="#e6e6e6">
+    <text x="80" y="300">René</text>
+    <text x="80" y="470">Mujica<tspan fill="#c8102e">.</tspan></text>
+  </g>
+
+  <!-- footer meta -->
+  <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="16" letter-spacing="2.5" fill="#4e4e4e">
+    <text x="80" y="590">© 2026 · R. MUJICA</text>
+    <text x="1120" y="590" text-anchor="end">SOFTWARE ENGINEER</text>
+  </g>
+</svg>
