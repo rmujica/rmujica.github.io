@@ -1,0 +1,31 @@
+# Secrets — never, ever
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+.next/
+.turbo/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local rclone config (lives on the server, not in repo)
+rclone.conf
+
+# Dokploy local state, if any drops into the repo by accident
+.dokploy/
+
+.claude-session
