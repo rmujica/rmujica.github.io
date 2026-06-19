@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Un solo servidor — René Mujica</title>
+        <meta name="author" content="René Mujica" />
+        <meta
+            name="description"
+            content="Cinco proyectos paralelos, un VPS de $12 en Santiago, detrás de Cloudflare. Todo el stack, y por qué cada pieza se ganó su lugar."
+        />
+        <meta name="color-scheme" content="dark" />
+
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="Un solo servidor" />
+        <meta
+            property="og:description"
+            content="Cinco proyectos paralelos, un VPS de $12 en Santiago, detrás de Cloudflare. Sin Vercel, sin Supabase, sin Redis."
+        />
+        <meta property="og:url" content="https://www.mujica.dev/blog/es/un-solo-servidor.html" />
+        <meta property="og:image" content="https://www.mujica.dev/og.svg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Un solo servidor" />
+        <meta
+            name="twitter:description"
+            content="Cinco proyectos paralelos, un VPS de $12 en Santiago. Sin Vercel, sin Supabase, sin Redis."
+        />
+        <meta name="twitter:image" content="https://www.mujica.dev/og.svg" />
+
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='10' fill='%23c8102e'/%3E%3C/svg%3E"
+        />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap"
+            rel="stylesheet"
+        />
+
+        <link rel="alternate" hreflang="en" href="https://www.mujica.dev/blog/one-vps-portfolio.html" />
+        <link rel="alternate" hreflang="es" href="https://www.mujica.dev/blog/es/un-solo-servidor.html" />
+
+        <link rel="stylesheet" href="../style.css" />
+    </head>
+    <body>
+        <div class="grain" aria-hidden="true"></div>
+
+        <header class="masthead" aria-label="Metadatos del sitio">
+            <a class="mark" href="/">MUJICA.DEV</a>
+            <a href="/blog/es/">Escritos</a>
+            <a href="../one-vps-portfolio.html" hreflang="en" lang="en">EN</a>
+            <span class="status"><span aria-hidden="true">·</span> Patagonia · CL</span>
+        </header>
+
+        <main>
+            <a class="back" href="/blog/es/">← Escritos</a>
+
+            <div class="post-head">
+                <p class="eyebrow">Infraestructura</p>
+                <h1>Un solo servidor<span class="dot">.</span></h1>
+                <p class="dek">
+                    Cinco proyectos paralelos, un droplet de $12 en Santiago,
+                    detrás de Cloudflare. Sin Vercel, sin Supabase, sin Redis.
+                </p>
+                <p class="post-meta">Junio 2026 · ~6 min</p>
+            </div>
+
+            <article>
+                <p>
+                    Tengo una pequeña pila de proyectos paralelos. Un agendador
+                    de citas por WhatsApp, una app de mensajería con entrega
+                    diferida, un backoffice para una agencia de viajes, un juego
+                    de apuestas para el Mundial con mis amigos, y un par más
+                    dando vueltas en la pista. Por un tiempo cada uno vivía en un
+                    free tier distinto: Vercel acá, Supabase allá, MongoDB Atlas,
+                    una caja olvidada de Oracle Cloud, Resend para los correos.
+                    Funcionaba, en el sentido en que un castillo de naipes
+                    funciona hasta que alguien estornuda.
+                </p>
+                <p>
+                    El problema de los free tiers no es el precio. Es que cada
+                    uno es un panel distinto, un modo de falla distinto, y un
+                    reloj distinto contando hacia el correo en que te cambian la
+                    tarifa. Supabase pausa tu base de datos después de siete días
+                    sin uso. Vercel se pone exigente apenas hueles a comercio.
+                    Yo quería un solo lugar que entendiera por completo, que
+                    pudiera razonar a las 2 de la mañana, y que costara más o
+                    menos lo mismo que dos cafés.
+                </p>
+                <p>
+                    Así que moví todo a <strong>un solo servidor</strong>. Acá
+                    está el mapa completo.
+                </p>
+
+                <div class="diagram" role="img" aria-label="Arquitectura: los usuarios llegan a Cloudflare, que hace de proxy hacia un único droplet de Vultr en Santiago que corre Dokploy, varias apps web, un worker compartido y Postgres. El acceso de administración es por una tailnet privada. Los backups van a R2.">
+<pre>          Usuarios (LatAm)
+               │
+        <span class="accent">┌──────────────┐</span>
+        <span class="accent">│  Cloudflare  │</span>   DNS · CDN · WAF · R2
+        <span class="accent">└──────┬───────┘</span>   proxy; origin tras firewall (solo CF)
+               │
+   <span class="accent">┌───────────┴────────────────────────┐</span>
+   <span class="accent">│  Vultr · Santiago · 1 vCPU / 2 GB   │</span>
+   <span class="accent">│  Dokploy  (Traefik + Docker)        │</span>
+   <span class="accent">│   ├─ atendi      (Next.js)          │</span>
+   <span class="accent">│   ├─ postamis    (API REST)         │</span>
+   <span class="accent">│   ├─ patagonica  (Next.js)          │</span>
+   <span class="accent">│   ├─ fubol       (Next.js)          │</span>
+   <span class="accent">│   ├─ shared-worker (pg-boss)        │</span>
+   <span class="accent">│   └─ postgres-16 (pg_cron, vector)  │</span>
+   <span class="accent">└─────────────────────────────────────┘</span>
+       Administración: entra por una tailnet privada.
+       Backups: pg_dump → R2, cada noche.</pre>
+                </div>
+                <span class="figcap">Toda la infraestructura de producción.</span>
+
+                <h2>El borde: Cloudflare</h2>
+                <p>
+                    Todo lo público entra por Cloudflare: DNS, CDN, WAF y TLS.
+                    La dirección real del droplet está tras un firewall, así que
+                    solo responde al tráfico que llegó a través de Cloudflare; el
+                    origin es invisible desde la internet abierta. La misma
+                    cuenta me da <strong>R2</strong> para almacenar archivos
+                    (compatible con S3, sin cobro de egreso) y un servicio de
+                    correo transaccional. Un proveedor reemplazó, sin hacer
+                    ruido, a cuatro.
+                </p>
+
+                <h2>Cómputo: un droplet de Vultr, manejado por Dokploy</h2>
+                <p>
+                    Todo corre sobre una instancia Vultr High Performance en
+                    Santiago: <strong>1 vCPU, 2 GB de RAM, 50 GB de NVMe</strong>.
+                    Santiago porque es la única región de una nube grande que
+                    está de verdad <em>en</em> Chile, lo que significa unos 5ms
+                    para la gente que usa estas apps en vez de un viaje triste de
+                    ida y vuelta a Virginia.
+                </p>
+                <p>
+                    Encima va <a href="https://dokploy.com" rel="noopener">Dokploy</a>,
+                    que es la parte que hace esto agradable en lugar de
+                    masoquista. Es una capa open-source y self-hosted sobre
+                    Traefik y Docker que te da deploys estilo Railway: le apuntas
+                    a un repo de GitHub, construye el Dockerfile, conecta el
+                    ruteo y los certificados de Let's Encrypt, listo. La misma
+                    experiencia de desarrollo que las plataformas que dejé,
+                    salvo que ahora es mía y no cuesta nada extra. Cada app es
+                    solo un contenedor en una red Docker compartida, así que se
+                    encuentran entre ellas y a la base de datos por nombre.
+                </p>
+
+                <h2>Un solo Postgres, muchas bases de datos</h2>
+                <p>
+                    Hay un único contenedor de <strong>Postgres 16</strong>, y
+                    cada proyecto tiene su propia base de datos y su propio rol
+                    adentro. <code>atendi</code>, <code>postamis</code>,
+                    <code>patagonica</code>, <code>fubol</code>: bases separadas,
+                    sin tablas compartidas, sin lecturas cruzadas entre apps. Es
+                    aburrido, es portable, y un <code>pg_dump</code> es la única
+                    primitiva de respaldo que necesito. Le agregué
+                    <code>pgvector</code> para las apps que quieren embeddings y
+                    <code>pg_cron</code> para los temporizadores dentro de la base,
+                    y ambos son apenas extensiones en vez de otro servicio que
+                    cuidar.
+                </p>
+                <p>
+                    La autenticación vive <em>dentro</em> de cada app (Better
+                    Auth o NextAuth, según el proyecto), no en el proveedor de la
+                    base de datos. Fue una decisión deliberada para alejarme del
+                    row-level-security para todo de Supabase. Menos magia, menos
+                    amarre, menos sorpresas cuando quiero hacer algo que el
+                    framework no anticipó.
+                </p>
+
+                <h2>Trabajos en segundo plano, sin Redis</h2>
+                <p>
+                    Dos de estas apps son básicamente relojes. Atendi manda
+                    recordatorios de citas; Postamis es una app de mensajería
+                    cuya premisa entera es entregar cosas <em>tarde, a
+                    propósito</em>. Ambas necesitan trabajo durable y agendado.
+                </p>
+                <p>
+                    El reflejo acá es echar mano de Redis y una cola de trabajos.
+                    No lo hice. Hay un único <strong>worker compartido</strong>
+                    corriendo <a href="https://github.com/timgit/pg-boss" rel="noopener">pg-boss</a>,
+                    que usa como cola el mismo Postgres que ya tengo. Despierta
+                    según un horario y le da un toque a cada app por HTTP; nunca
+                    lee la base de datos de nadie más. Así la cola es durable,
+                    los trabajos sobreviven a los reinicios, y agregué
+                    exactamente cero piezas móviles nuevas. La cosa que no corres
+                    no te puede despertar a medianoche.
+                </p>
+
+                <h2>El correo, separado a propósito</h2>
+                <p>
+                    El correo es el único lugar donde a propósito <em>no</em>
+                    consolido, porque los modos de falla son distintos. Las
+                    casillas humanas, las direcciones que de verdad leo, pasan
+                    por un proveedor de correo dedicado. El correo que generan
+                    las apps (códigos de inicio de sesión, recordatorios) sale
+                    por el servicio de correo de Cloudflare, que administra solo
+                    el SPF, el DKIM y el DMARC porque Cloudflare ya maneja mi DNS.
+                    Si un envío transaccional alguna vez mete en problemas mi
+                    reputación, no se puede llevar de paso mi bandeja personal. La
+                    separación acá es por seguridad, no por costo.
+                </p>
+
+                <h2>Respaldos y la puerta de atrás</h2>
+                <p>
+                    Cada noche un script corre <code>pg_dump</code> sobre cada
+                    base de datos y manda el resultado a R2 con
+                    <code>rclone</code>. Fuera de la caja, versionado, dentro del
+                    free tier, y tengo un script que prueba la restauración para
+                    que los respaldos no sean solo respaldos de Schrödinger. La
+                    administración (el panel de Dokploy, SSH) pasa por una red
+                    privada de <a href="https://tailscale.com" rel="noopener">Tailscale</a>,
+                    nunca por la internet pública. El plano de control sencillamente
+                    no es alcanzable a menos que ya estés en mi tailnet.
+                </p>
+
+                <h2>La cuenta</h2>
+                <p>
+                    La razón por la que vale la pena escribir todo esto:
+                </p>
+                <table class="ledger-table">
+                    <thead>
+                        <tr><th>Ítem</th><th>Proveedor</th><th>/mes</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Droplet · 1 vCPU / 2 GB · Santiago</td><td>Vultr</td><td>$12</td></tr>
+                        <tr><td>DNS · CDN · WAF · R2</td><td>Cloudflare</td><td>$0</td></tr>
+                        <tr><td>Correo transaccional</td><td>Cloudflare</td><td>~$5</td></tr>
+                        <tr><td>Casillas humanas</td><td>MXroute</td><td>~$5</td></tr>
+                        <tr><td>Respaldos fuera de la caja</td><td>R2 (free tier)</td><td>$0</td></tr>
+                        <tr class="total"><td>Total</td><td></td><td>~$22</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Más o menos <strong>$22 al mes</strong> por toda la
+                    infraestructura, contra un techo que yo mismo fijé en $40. El
+                    margen no está gastado porque nada se lo ha ganado todavía;
+                    cuando un proyecto necesite una caja más grande, subo el
+                    droplet y sigo. Un servidor ha cargado cómodamente con cinco
+                    apps hasta ahora, y un equipo de 2 GB construyendo imágenes
+                    de Docker es la parte más apretada, no servir el tráfico.
+                </p>
+
+                <h2>¿Lo recomendaría?</h2>
+                <p>
+                    Si tienes clientes que pagan y un turno de on-call: no,
+                    quédate con todo administrado. Pero para alguien que desarrolla
+                    solo, con un puñado de proyectos y sin clientes en producción,
+                    el impuesto de las plataformas es real y el costo operativo de
+                    un servidor bien cuidado es más bajo de lo que parece. El
+                    canje que hice es más configuración al principio a cambio de
+                    un sistema que entiendo por completo y una cuenta que no me
+                    sorprende. Hasta ahora fue el correcto.
+                </p>
+                <p>
+                    El stack aburrido gana más seguido de lo que le reconocen.
+                </p>
+
+                <div class="post-foot">
+                    Lo armé, lo rompí, lo escribí. Preguntas →
+                    <a href="mailto:rene@mujica.dev">rene@mujica.dev</a>.
+                </div>
+            </article>
+        </main>
+
+        <footer class="colophon" aria-label="Colofón">
+            <span>© 2026 · R. Mujica</span>
+            <span class="cursor" aria-hidden="true">_</span>
+        </footer>
+    </body>
+</html>

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>One small server — René Mujica</title>
+        <meta name="author" content="René Mujica" />
+        <meta
+            name="description"
+            content="Five side projects, one $12 VPS in Santiago, behind Cloudflare. The whole stack — what runs where, and why each piece earned its place."
+        />
+        <meta name="color-scheme" content="dark" />
+
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="One small server" />
+        <meta
+            property="og:description"
+            content="Five side projects, one $12 VPS in Santiago, behind Cloudflare. No Vercel, no Supabase, no Redis."
+        />
+        <meta property="og:url" content="https://www.mujica.dev/blog/one-vps-portfolio.html" />
+        <meta property="og:image" content="https://www.mujica.dev/og.svg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="One small server" />
+        <meta
+            name="twitter:description"
+            content="Five side projects, one $12 VPS in Santiago. No Vercel, no Supabase, no Redis."
+        />
+        <meta name="twitter:image" content="https://www.mujica.dev/og.svg" />
+
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='10' fill='%23c8102e'/%3E%3C/svg%3E"
+        />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap"
+            rel="stylesheet"
+        />
+
+        <link rel="alternate" hreflang="en" href="https://www.mujica.dev/blog/one-vps-portfolio.html" />
+        <link rel="alternate" hreflang="es" href="https://www.mujica.dev/blog/es/un-solo-servidor.html" />
+
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <div class="grain" aria-hidden="true"></div>
+
+        <header class="masthead" aria-label="Site metadata">
+            <a class="mark" href="/">MUJICA.DEV</a>
+            <a href="/blog/">Writing</a>
+            <a href="es/un-solo-servidor.html" hreflang="es" lang="es">ES</a>
+            <span class="status"><span aria-hidden="true">·</span> Patagonia · CL</span>
+        </header>
+
+        <main>
+            <a class="back" href="/blog/">← Writing</a>
+
+            <div class="post-head">
+                <p class="eyebrow">Infrastructure</p>
+                <h1>One small server<span class="dot">.</span></h1>
+                <p class="dek">
+                    Five side projects, one $12 droplet in Santiago, behind
+                    Cloudflare. No Vercel, no Supabase, no Redis.
+                </p>
+                <p class="post-meta">June 2026 · ~6 min</p>
+            </div>
+
+            <article>
+                <p>
+                    I have a small pile of side projects. A WhatsApp appointment
+                    scheduler, a delayed-delivery messaging app, a travel-agency
+                    backoffice, a World Cup betting game for my friends, and a
+                    couple more circling the runway. For a while each one lived
+                    on a different free tier — Vercel here, Supabase there,
+                    MongoDB Atlas, a forgotten Oracle Cloud box, Resend for
+                    email. It worked, in the sense that a house of cards works
+                    until someone sneezes.
+                </p>
+                <p>
+                    The problem with free tiers isn't the price. It's that each
+                    one is a separate dashboard, a separate failure mode, and a
+                    separate clock counting down to a pricing email. Supabase
+                    pauses your database after seven idle days. Vercel gets
+                    opinionated the moment you smell like commerce. I wanted one
+                    place I understood completely, that I could reason about at
+                    2am, and that cost about the same as two coffees.
+                </p>
+                <p>
+                    So I moved everything onto <strong>one server</strong>.
+                    Here's the whole map.
+                </p>
+
+                <div class="diagram" role="img" aria-label="Architecture: users hit Cloudflare, which proxies to a single Vultr droplet in Santiago running Dokploy, several web apps, a shared worker, and Postgres. Admin access is over a private tailnet. Backups go to R2.">
+<pre>          Users (LatAm)
+               │
+        <span class="accent">┌──────────────┐</span>
+        <span class="accent">│  Cloudflare  │</span>   DNS · CDN · WAF · R2
+        <span class="accent">└──────┬───────┘</span>   proxied; origin firewalled to CF
+               │
+   <span class="accent">┌───────────┴────────────────────────┐</span>
+   <span class="accent">│  Vultr · Santiago · 1 vCPU / 2 GB   │</span>
+   <span class="accent">│  Dokploy  (Traefik + Docker)        │</span>
+   <span class="accent">│   ├─ atendi      (Next.js)          │</span>
+   <span class="accent">│   ├─ postamis    (REST API)         │</span>
+   <span class="accent">│   ├─ patagonica  (Next.js)          │</span>
+   <span class="accent">│   ├─ fubol       (Next.js)          │</span>
+   <span class="accent">│   ├─ shared-worker (pg-boss)        │</span>
+   <span class="accent">│   └─ postgres-16 (pg_cron, vector)  │</span>
+   <span class="accent">└─────────────────────────────────────┘</span>
+       Admin in over a private tailnet.
+       Backups out: pg_dump → R2, nightly.</pre>
+                </div>
+                <span class="figcap">The entire production estate.</span>
+
+                <h2>The edge: Cloudflare</h2>
+                <p>
+                    Everything public enters through Cloudflare — DNS, CDN, WAF,
+                    and TLS. The droplet's real address is firewalled so it only
+                    answers traffic that arrived through Cloudflare; the origin
+                    is invisible from the open internet. The same account gives
+                    me <strong>R2</strong> for object storage (S3-compatible,
+                    zero egress fees) and a transactional email service. One
+                    vendor quietly replaced four.
+                </p>
+
+                <h2>Compute: one Vultr droplet, run by Dokploy</h2>
+                <p>
+                    The whole thing runs on a Vultr High Performance instance in
+                    Santiago — <strong>1 vCPU, 2 GB of RAM, 50 GB of NVMe</strong>.
+                    Santiago because it's the only mainstream cloud region
+                    actually <em>in</em> Chile, which means about 5ms to the
+                    people who use these apps instead of a sad round trip to
+                    Virginia.
+                </p>
+                <p>
+                    On top of it sits <a href="https://dokploy.com" rel="noopener">Dokploy</a>,
+                    which is the part that makes this pleasant rather than
+                    masochistic. It's an open-source, self-hosted layer over
+                    Traefik and Docker that gives you Railway-style deploys:
+                    point it at a GitHub repo, it builds the Dockerfile, wires
+                    up routing and Let's Encrypt certs, done. Same developer
+                    experience as the platforms I left, except I own it and it
+                    costs nothing extra. Every app is just a container on a
+                    shared Docker network, so they find each other and the
+                    database by name.
+                </p>
+
+                <h2>One Postgres, many databases</h2>
+                <p>
+                    There's a single <strong>Postgres 16</strong> container, and
+                    each project gets its own database and its own role inside
+                    it. <code>atendi</code>, <code>postamis</code>,
+                    <code>patagonica</code>, <code>fubol</code> — separate
+                    databases, no shared tables, no cross-app reads. It's
+                    boring, it's portable, and a <code>pg_dump</code> is the only
+                    backup primitive I need. I added <code>pgvector</code> for
+                    the apps that want embeddings and <code>pg_cron</code> for
+                    in-database timers, both of which are just extensions rather
+                    than another service to babysit.
+                </p>
+                <p>
+                    Auth lives <em>in</em> each app (Better Auth or NextAuth,
+                    depending on the project), not in the database vendor. That
+                    was a deliberate move away from Supabase's row-level-security
+                    everything. Less magic, less lock-in, fewer surprises when I
+                    want to do something the framework didn't anticipate.
+                </p>
+
+                <h2>Background jobs, without Redis</h2>
+                <p>
+                    Two of these apps are basically clocks. Atendi sends
+                    appointment reminders; Postamis is a messaging app whose
+                    entire premise is delivering things <em>late, on purpose</em>.
+                    Both need durable, scheduled work.
+                </p>
+                <p>
+                    The reflex here is to reach for Redis and a job queue. I
+                    didn't. There's a single <strong>shared worker</strong>
+                    running <a href="https://github.com/timgit/pg-boss" rel="noopener">pg-boss</a>,
+                    which uses the Postgres I already have as its queue. It wakes
+                    up on a schedule and pokes each app over HTTP — it never
+                    reads anyone else's database. So the queue is durable, the
+                    jobs survive restarts, and I added exactly zero new moving
+                    parts. The thing you don't run can't page you.
+                </p>
+
+                <h2>Email, split on purpose</h2>
+                <p>
+                    Email is the one place I deliberately <em>don't</em>
+                    consolidate, because the failure modes are different.
+                    Human mailboxes — the addresses I actually read — go through
+                    a dedicated mail host. App-generated mail (login codes,
+                    reminders) goes out through Cloudflare's email service, which
+                    auto-manages SPF, DKIM and DMARC because Cloudflare already
+                    runs my DNS. If a transactional send ever gets my sending
+                    reputation in trouble, it can't take my personal inbox down
+                    with it. Separation here is about safety, not cost.
+                </p>
+
+                <h2>Backups and the back door</h2>
+                <p>
+                    Every night a script runs <code>pg_dump</code> on each
+                    database and ships the result to R2 with <code>rclone</code>.
+                    Off-box, versioned, inside the free tier, and I have a
+                    restore-test script so the backups aren't just
+                    Schrödinger's backups. Administration (the Dokploy
+                    dashboard, SSH) happens over a private
+                    <a href="https://tailscale.com" rel="noopener">Tailscale</a>
+                    network, never the public internet. The control plane simply
+                    isn't reachable unless you're already on my tailnet.
+                </p>
+
+                <h2>The bill</h2>
+                <p>
+                    The reason any of this is worth writing down:
+                </p>
+                <table class="ledger-table">
+                    <thead>
+                        <tr><th>Item</th><th>Provider</th><th>/mo</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Droplet · 1 vCPU / 2 GB · Santiago</td><td>Vultr</td><td>$12</td></tr>
+                        <tr><td>DNS · CDN · WAF · R2</td><td>Cloudflare</td><td>$0</td></tr>
+                        <tr><td>Transactional email</td><td>Cloudflare</td><td>~$5</td></tr>
+                        <tr><td>Human mailboxes</td><td>MXroute</td><td>~$5</td></tr>
+                        <tr><td>Off-box backups</td><td>R2 (free tier)</td><td>$0</td></tr>
+                        <tr class="total"><td>Total</td><td></td><td>~$22</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Roughly <strong>$22 a month</strong> for the whole estate,
+                    against a ceiling I set myself at $40. The headroom isn't
+                    spent because nothing has earned it yet — when one project
+                    needs a bigger box, I bump the droplet and keep going. One
+                    server has comfortably carried five apps so far, and a 2 GB
+                    box building Docker images is the tightest part, not serving
+                    traffic.
+                </p>
+
+                <h2>Would I recommend it?</h2>
+                <p>
+                    If you have paying customers and an on-call rotation: no,
+                    keep your managed everything. But for a solo developer with a
+                    handful of projects and no live clients, the platform tax is
+                    real and the operational cost of one well-kept server is
+                    lower than it looks. The trade I made is more setup up front
+                    in exchange for a system I fully understand and a bill that
+                    doesn't surprise me. So far it's been the right one.
+                </p>
+                <p>
+                    The boring stack wins more often than it gets credit for.
+                </p>
+
+                <div class="post-foot">
+                    Built it, broke it, wrote it down. Questions →
+                    <a href="mailto:rene@mujica.dev">rene@mujica.dev</a>.
+                </div>
+            </article>
+        </main>
+
+        <footer class="colophon" aria-label="Colophon">
+            <span>© 2026 · R. Mujica</span>
+            <span class="cursor" aria-hidden="true">_</span>
+        </footer>
+    </body>
+</html>
