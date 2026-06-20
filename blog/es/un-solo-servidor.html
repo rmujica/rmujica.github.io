@@ -70,29 +70,29 @@
 
             <article>
                 <p>
-                    Tengo una pequeña pila de proyectos paralelos. Un agendador
-                    de citas por WhatsApp, una app de mensajería con entrega
-                    diferida, un backoffice para una agencia de viajes, un juego
-                    de apuestas para el Mundial con mis amigos, y un par más
-                    dando vueltas en la pista. Por un tiempo cada uno vivía en un
-                    free tier distinto: Vercel acá, Supabase allá, MongoDB Atlas,
-                    una caja olvidada de Oracle Cloud, Resend para los correos.
-                    Funcionaba, en el sentido en que un castillo de naipes
-                    funciona hasta que alguien estornuda.
+                    Tengo varios proyectos paralelos dando vueltas. Un agendador
+                    de citas por WhatsApp, una app de mensajería que entrega con
+                    retraso, un backoffice para una agencia de viajes, un juego de
+                    apuestas del Mundial para mis amigos, y un par más a medio
+                    cocinar. Por un tiempo cada uno vivía en un free tier
+                    distinto: Vercel por acá, Supabase por allá, MongoDB Atlas,
+                    una instancia olvidada en Oracle Cloud, Resend para los
+                    correos. Funcionaba, en el mismo sentido en que funciona un
+                    castillo de naipes: hasta que alguien estornuda.
                 </p>
                 <p>
-                    El problema de los free tiers no es el precio. Es que cada
-                    uno es un panel distinto, un modo de falla distinto, y un
-                    reloj distinto contando hacia el correo en que te cambian la
-                    tarifa. Supabase pausa tu base de datos después de siete días
-                    sin uso. Vercel se pone exigente apenas hueles a comercio.
-                    Yo quería un solo lugar que entendiera por completo, que
-                    pudiera razonar a las 2 de la mañana, y que costara más o
-                    menos lo mismo que dos cafés.
+                    El problema de los free tiers no es el precio. Es que cada uno
+                    es otro panel, otro modo de falla, y otra cuenta regresiva
+                    hacia el correo donde te suben el plan. Supabase te pausa la
+                    base de datos a los siete días sin uso. Vercel se pone
+                    quisquilloso apenas hueles a que vas a cobrar por algo. Yo
+                    quería un solo lugar, que entendiera de punta a punta, que
+                    pudiera tener claro en la cabeza a las 2 de la mañana, y que
+                    costara más o menos lo mismo que dos cafés.
                 </p>
                 <p>
-                    Así que moví todo a <strong>un solo servidor</strong>. Acá
-                    está el mapa completo.
+                    Así que metí todo en <strong>un solo servidor</strong>. Este
+                    es el mapa completo.
                 </p>
 
                 <div class="diagram" role="img" aria-label="Arquitectura: los usuarios llegan a Cloudflare, que hace de proxy hacia un único droplet de Vultr en Santiago que corre Dokploy, varias apps web, un worker compartido y Postgres. El acceso de administración es por una tailnet privada. Los backups van a R2.">
@@ -119,105 +119,105 @@
 
                 <h2>El borde: Cloudflare</h2>
                 <p>
-                    Todo lo público entra por Cloudflare: DNS, CDN, WAF y TLS.
-                    La dirección real del droplet está tras un firewall, así que
-                    solo responde al tráfico que llegó a través de Cloudflare; el
-                    origin es invisible desde la internet abierta. La misma
-                    cuenta me da <strong>R2</strong> para almacenar archivos
-                    (compatible con S3, sin cobro de egreso) y un servicio de
-                    correo transaccional. Un proveedor reemplazó, sin hacer
-                    ruido, a cuatro.
+                    Todo lo público entra por Cloudflare: DNS, CDN, WAF y TLS. La
+                    dirección real del droplet está detrás de un firewall, así que
+                    solo contesta el tráfico que pasó por Cloudflare; desde la
+                    internet abierta el origin no se ve. La misma cuenta me da
+                    <strong>R2</strong> para guardar archivos (compatible con S3 y
+                    sin cobro por salida de datos) y un servicio de correo
+                    transaccional. Un proveedor reemplazó a cuatro sin hacer
+                    ruido.
                 </p>
 
                 <h2>Cómputo: un droplet de Vultr, manejado por Dokploy</h2>
                 <p>
                     Todo corre sobre una instancia Vultr High Performance en
                     Santiago: <strong>1 vCPU, 2 GB de RAM, 50 GB de NVMe</strong>.
-                    Santiago porque es la única región de una nube grande que
-                    está de verdad <em>en</em> Chile, lo que significa unos 5ms
-                    para la gente que usa estas apps en vez de un viaje triste de
-                    ida y vuelta a Virginia.
+                    Santiago porque es la única región de una nube grande que está
+                    de verdad <em>en</em> Chile, lo que significa unos 5ms para la
+                    gente que usa estas apps, en vez de un viaje de ida y vuelta
+                    hasta Virginia.
                 </p>
                 <p>
                     Encima va <a href="https://dokploy.com" rel="noopener">Dokploy</a>,
-                    que es la parte que hace esto agradable en lugar de
-                    masoquista. Es una capa open-source y self-hosted sobre
-                    Traefik y Docker que te da deploys estilo Railway: le apuntas
-                    a un repo de GitHub, construye el Dockerfile, conecta el
-                    ruteo y los certificados de Let's Encrypt, listo. La misma
-                    experiencia de desarrollo que las plataformas que dejé,
-                    salvo que ahora es mía y no cuesta nada extra. Cada app es
-                    solo un contenedor en una red Docker compartida, así que se
-                    encuentran entre ellas y a la base de datos por nombre.
+                    que es la parte que hace que esto sea llevadero y no una
+                    tortura. Es una capa open-source y self-hosted sobre Traefik y
+                    Docker que te da deploys al estilo Railway: le apuntas a un
+                    repo de GitHub y él solo construye el Dockerfile, arma el ruteo
+                    y saca los certificados de Let's Encrypt. Listo. La misma
+                    comodidad que las plataformas que dejé, pero ahora es mía y no
+                    cuesta nada extra. Cada app es apenas un contenedor en una red
+                    Docker compartida, así que se encuentran entre sí, y a la base
+                    de datos, por su nombre.
                 </p>
 
                 <h2>Un solo Postgres, muchas bases de datos</h2>
                 <p>
-                    Hay un único contenedor de <strong>Postgres 16</strong>, y
-                    cada proyecto tiene su propia base de datos y su propio rol
-                    adentro. <code>atendi</code>, <code>postamis</code>,
+                    Hay un solo contenedor de <strong>Postgres 16</strong>, y cada
+                    proyecto tiene su base de datos y su rol adentro.
+                    <code>atendi</code>, <code>postamis</code>,
                     <code>patagonica</code>, <code>fubol</code>: bases separadas,
-                    sin tablas compartidas, sin lecturas cruzadas entre apps. Es
-                    aburrido, es portable, y un <code>pg_dump</code> es la única
-                    primitiva de respaldo que necesito. Le agregué
-                    <code>pgvector</code> para las apps que quieren embeddings y
-                    <code>pg_cron</code> para los temporizadores dentro de la base,
-                    y ambos son apenas extensiones en vez de otro servicio que
-                    cuidar.
+                    sin tablas compartidas, sin que una app lea la de otra. Es
+                    aburrido, es portable, y para respaldar me basta con un
+                    <code>pg_dump</code>. Le sumé <code>pgvector</code> para las
+                    apps que quieren embeddings y <code>pg_cron</code> para los
+                    temporizadores dentro de la base; los dos son apenas
+                    extensiones, no un servicio más que andar cuidando.
                 </p>
                 <p>
-                    La autenticación vive <em>dentro</em> de cada app (Better
-                    Auth o NextAuth, según el proyecto), no en el proveedor de la
-                    base de datos. Fue una decisión deliberada para alejarme del
+                    La autenticación vive dentro de cada app (Better Auth o
+                    NextAuth, según el proyecto), no en el proveedor de la base de
+                    datos. Fue una decisión a propósito para alejarme del
                     row-level-security para todo de Supabase. Menos magia, menos
                     amarre, menos sorpresas cuando quiero hacer algo que el
-                    framework no anticipó.
+                    framework no tenía previsto.
                 </p>
 
-                <h2>Trabajos en segundo plano, sin Redis</h2>
+                <h2>Tareas en segundo plano, sin Redis</h2>
                 <p>
-                    Dos de estas apps son básicamente relojes. Atendi manda
-                    recordatorios de citas; Postamis es una app de mensajería
-                    cuya premisa entera es entregar cosas <em>tarde, a
-                    propósito</em>. Ambas necesitan trabajo durable y agendado.
+                    Dos de estas apps son, en el fondo, relojes. Atendi manda
+                    recordatorios de citas; Postamis es una app de mensajería cuya
+                    gracia entera es entregar las cosas <em>tarde, a
+                    propósito</em>. Las dos necesitan tareas programadas que no se
+                    pierdan.
                 </p>
                 <p>
-                    El reflejo acá es echar mano de Redis y una cola de trabajos.
-                    No lo hice. Hay un único <strong>worker compartido</strong>
+                    El reflejo acá es tirar mano de Redis y una cola de trabajos.
+                    No lo hice. Hay un solo <strong>worker compartido</strong>
                     corriendo <a href="https://github.com/timgit/pg-boss" rel="noopener">pg-boss</a>,
-                    que usa como cola el mismo Postgres que ya tengo. Despierta
-                    según un horario y le da un toque a cada app por HTTP; nunca
-                    lee la base de datos de nadie más. Así la cola es durable,
-                    los trabajos sobreviven a los reinicios, y agregué
-                    exactamente cero piezas móviles nuevas. La cosa que no corres
-                    no te puede despertar a medianoche.
+                    que usa de cola el mismo Postgres que ya tengo. Despierta según
+                    un horario y le hace ping a cada app por HTTP; nunca lee la
+                    base de datos de nadie más. Así la cola es persistente, las
+                    tareas sobreviven a los reinicios, y no sumé ni una sola pieza
+                    móvil nueva. Lo que no levantas no te puede despertar a
+                    medianoche.
                 </p>
 
                 <h2>El correo, separado a propósito</h2>
                 <p>
-                    El correo es el único lugar donde a propósito <em>no</em>
-                    consolido, porque los modos de falla son distintos. Las
-                    casillas humanas, las direcciones que de verdad leo, pasan
-                    por un proveedor de correo dedicado. El correo que generan
-                    las apps (códigos de inicio de sesión, recordatorios) sale
-                    por el servicio de correo de Cloudflare, que administra solo
-                    el SPF, el DKIM y el DMARC porque Cloudflare ya maneja mi DNS.
-                    Si un envío transaccional alguna vez mete en problemas mi
-                    reputación, no se puede llevar de paso mi bandeja personal. La
-                    separación acá es por seguridad, no por costo.
+                    El correo es el único lugar donde, a propósito,
+                    <em>no</em> consolido, porque las formas de fallar son
+                    distintas. Las casillas humanas (las direcciones que de verdad
+                    leo) pasan por un proveedor de correo dedicado. El correo que
+                    generan las apps (códigos para entrar, recordatorios) sale por
+                    el servicio de correo de Cloudflare, que se hace cargo solo del
+                    SPF, el DKIM y el DMARC porque Cloudflare ya maneja mi DNS. Si
+                    algún envío transaccional me ensucia la reputación, no se lleva
+                    de paso mi bandeja personal. Acá la separación es por
+                    seguridad, no por plata.
                 </p>
 
                 <h2>Respaldos y la puerta de atrás</h2>
                 <p>
-                    Cada noche un script corre <code>pg_dump</code> sobre cada
-                    base de datos y manda el resultado a R2 con
-                    <code>rclone</code>. Fuera de la caja, versionado, dentro del
-                    free tier, y tengo un script que prueba la restauración para
-                    que los respaldos no sean solo respaldos de Schrödinger. La
-                    administración (el panel de Dokploy, SSH) pasa por una red
-                    privada de <a href="https://tailscale.com" rel="noopener">Tailscale</a>,
-                    nunca por la internet pública. El plano de control sencillamente
-                    no es alcanzable a menos que ya estés en mi tailnet.
+                    Cada noche un script corre <code>pg_dump</code> sobre cada base
+                    de datos y manda el resultado a R2 con <code>rclone</code>.
+                    Fuera del servidor, versionado, dentro del free tier, y tengo
+                    un script que prueba la restauración para que los respaldos no
+                    sean solo respaldos de Schrödinger. La administración (el panel
+                    de Dokploy, el SSH) pasa por una red privada de
+                    <a href="https://tailscale.com" rel="noopener">Tailscale</a>,
+                    nunca por la internet pública. Al plano de control
+                    sencillamente no se llega si no estás ya en mi tailnet.
                 </p>
 
                 <h2>La cuenta</h2>
@@ -233,37 +233,36 @@
                         <tr><td>DNS · CDN · WAF · R2</td><td>Cloudflare</td><td>$0</td></tr>
                         <tr><td>Correo transaccional</td><td>Cloudflare</td><td>~$5</td></tr>
                         <tr><td>Casillas humanas</td><td>MXroute</td><td>~$5</td></tr>
-                        <tr><td>Respaldos fuera de la caja</td><td>R2 (free tier)</td><td>$0</td></tr>
+                        <tr><td>Respaldos fuera del servidor</td><td>R2 (free tier)</td><td>$0</td></tr>
                         <tr class="total"><td>Total</td><td></td><td>~$22</td></tr>
                     </tbody>
                 </table>
                 <p>
-                    Más o menos <strong>$22 al mes</strong> por toda la
-                    infraestructura, contra un techo que yo mismo fijé en $40. El
-                    margen no está gastado porque nada se lo ha ganado todavía;
-                    cuando un proyecto necesite una caja más grande, subo el
-                    droplet y sigo. Un servidor ha cargado cómodamente con cinco
-                    apps hasta ahora, y un equipo de 2 GB construyendo imágenes
-                    de Docker es la parte más apretada, no servir el tráfico.
+                    Unos <strong>$22 al mes</strong> por toda la infraestructura,
+                    contra un techo que yo mismo me puse en $40. Ese margen no lo
+                    he tocado porque ningún proyecto se lo ha ganado todavía;
+                    cuando a alguno le quede chica la máquina, le subo specs al
+                    droplet y sigo. Un servidor ha aguantado cómodo cinco apps
+                    hasta ahora, y lo que más se aprieta es una máquina de 2 GB
+                    construyendo imágenes de Docker, no sirviendo el tráfico.
                 </p>
 
                 <h2>¿Lo recomendaría?</h2>
                 <p>
-                    Si tienes clientes que pagan y un turno de on-call: no,
-                    quédate con todo administrado. Pero para alguien que desarrolla
-                    solo, con un puñado de proyectos y sin clientes en producción,
-                    el impuesto de las plataformas es real y el costo operativo de
-                    un servidor bien cuidado es más bajo de lo que parece. El
-                    canje que hice es más configuración al principio a cambio de
-                    un sistema que entiendo por completo y una cuenta que no me
-                    sorprende. Hasta ahora fue el correcto.
+                    Si tienes clientes que pagan y un turno de on-call: no, quédate
+                    con todo administrado. Pero si programas solo, con un puñado de
+                    proyectos y sin clientes en producción, el peaje de las
+                    plataformas es real y mantener un servidor bien cuidado cuesta
+                    menos de lo que parece. El trato fue este: más configuración al
+                    principio a cambio de un sistema que entiendo entero y una
+                    cuenta que no me da sustos. Hasta ahora, fue el correcto.
                 </p>
                 <p>
-                    El stack aburrido gana más seguido de lo que le reconocen.
+                    El stack aburrido gana más seguido de lo que la gente cree.
                 </p>
 
                 <div class="post-foot">
-                    Lo armé, lo rompí, lo escribí. Preguntas →
+                    Lo armé, lo rompí y lo escribí. Preguntas →
                     <a href="mailto:rene@mujica.dev">rene@mujica.dev</a>.
                 </div>
             </article>
